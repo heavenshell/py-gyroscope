@@ -20,7 +20,19 @@ class Gyroscope(object):
     def __init__(self, logger=None):
         self.logger = logger
 
-    def run(self, filepath, rotation_count):
+    def compare_filestat(self, src, dest):
+        if not os.path.exists(src) or not os.path.exists(dest):
+            return False
+
+        src_stat = os.stat(src)
+        dest_stat = os.stat(dest)
+        if src_stat.st_mtime == dest_stat.st_mtime:
+            self.logger.info('{0} and {1} is same file.'.format(src, dest))
+            return True
+
+        return False
+
+    def run(self, filepath, rotation_count, force_rotate=False):
         """
         Rotate file.
 
@@ -48,11 +60,12 @@ class Gyroscope(object):
         i = rotation_count - 1
         lastfile = '{0}.{1}'.format(filepath, rotation_count)
         if os.path.exists(lastfile):
-            self.logger.info('{0}, file is last.'.format(lastfile))
-            os.remove(lastfile)
-            self.logger.info('{0}, delete success'.format(lastfile))
-        else:
-            pass
+            #: Check lastfile and lastfile - 1 file is same.
+            ret = self.compare_filestat('{0}.{1}'.format(filepath, i), lastfile)
+            if ret is False:
+                self.logger.info('{0}, file is last.'.format(lastfile))
+                os.remove(lastfile)
+                self.logger.info('{0}, delete success'.format(lastfile))
 
         j = 0
         while i >= 1:
@@ -60,19 +73,23 @@ class Gyroscope(object):
             dest = '{0}.{1}'.format(filepath, j)
             src = '{0}.{1}'.format(filepath, i)
             if os.path.exists(src):
-                self.logger.info('Start move {0} to {1}'.format(src, dest))
-                os.rename(src, dest)
-                self.logger.info('Move {0} to {1} success.'.format(src, dest))
+                ret = self.compare_filestat(src, dest)
+                if ret is False:
+                    self.logger.info('Start move {0} to {1}'.format(src, dest))
+                    os.rename(src, dest)
+                    self.logger.info('Move {0} to {1} success.'.format(src, dest))
 
             i -= 1
 
-        self.logger.info('Start move {0} to {1}.1'.format(src, dest))
-        shutil.copy2(filepath, '{0}.{1}'.format(filepath, 1))
-        self.logger.info('Move {0} to {1}.1 success.'.format(src, dest))
+        ret = self.compare_filestat(filepath, '{0}.1'.format(filepath))
+        if ret is False:
+            self.logger.info('Start move {0} to {0}.1'.format(filepath))
+            shutil.copy2(filepath, '{0}.{1}'.format(filepath, 1))
+            self.logger.info('Move {0} to {0}.1 success.'.format(filepath))
+
+
         self.logger.info('-----------------End rotation.-----------------')
-
-
-def main(filepath, rotation_count):
+def main(filepath, rotation_count, force_rotate=False):
     logformat = '%(asctime)s - %(levelname)s - %(message)s'
     logging.basicConfig(format=logformat)
     logger = logging.getLogger('gyroscope')
@@ -87,7 +104,7 @@ def main(filepath, rotation_count):
     logger.addHandler(trh)
 
     g = Gyroscope(logger)
-    g.run(filepath, rotation_count)
+    g.run(filepath, rotation_count, force_rotate)
 
 
 def parse_option():
@@ -99,8 +116,9 @@ def parse_option():
     usage = 'usage: %prog [options] keyword'
     parser = optparse.OptionParser(usage)
     parser.add_option('-p', '--path', default=None)
-    parser.add_option('-n', '--rotation-number', default=3)
+    parser.add_option('-n', '--rotation-number', default=3, type='int')
     parser.add_option('-l', '--logfile-path', default='./rotation.log')
+    parser.add_option('-f', '--force-rotate', default=False)
 
     options, args = parser.parse_args()
 
@@ -109,5 +127,4 @@ def parse_option():
 
 if __name__ == '__main__':
     options = parse_option()
-
-    main(options.path, options.rotation_number)
+    main(options.path, options.rotation_number, options.force_rotate)
