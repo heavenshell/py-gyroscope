@@ -21,12 +21,25 @@ class Gyroscope(object):
         self.logger = logger
 
     def compare_filestat(self, src, dest):
+        """Compare file timestamp and filesize.
+
+        :param src: Src filepath
+        :param dest: Dest filepath
+        """
         if not os.path.exists(src) or not os.path.exists(dest):
             return False
 
         src_stat = os.stat(src)
         dest_stat = os.stat(dest)
+
+
         if src_stat.st_mtime == dest_stat.st_mtime:
+            self.logger.info('{0} and {1} is same file.'.format(src, dest))
+            return True
+
+        src_filesize = os.path.getsize(src)
+        dest_filesize = os.path.getsize(dest)
+        if src_filesize == dest_filesize:
             self.logger.info('{0} and {1} is same file.'.format(src, dest))
             return True
 
