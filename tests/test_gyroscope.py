@@ -22,7 +22,6 @@ class TestGyroscope(TestCase):
         self.gyroscope = Gyroscope(logger)
 
         self.current = os.path.dirname(os.path.abspath(__file__))
-        print(self.current)
         fixtures = [
             '{0}/test.txt.1'.format(self.current),
             '{0}/test.txt.2'.format(self.current),
