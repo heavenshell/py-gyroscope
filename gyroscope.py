@@ -32,18 +32,32 @@ class Gyroscope(object):
         src_stat = os.stat(src)
         dest_stat = os.stat(dest)
 
-
         if src_stat.st_mtime == dest_stat.st_mtime:
             self.logger.info('{0} and {1} is same file.'.format(src, dest))
+            self.log_file_stat(src)
+            self.log_file_stat(dest)
             return True
 
         src_filesize = os.path.getsize(src)
         dest_filesize = os.path.getsize(dest)
         if src_filesize == dest_filesize:
             self.logger.info('{0} and {1} is same file.'.format(src, dest))
+            self.log_file_stat(src)
+            self.log_file_stat(dest)
             return True
 
         return False
+
+    def log_file_stat(self, file):
+        """Output file's stat(timestamp) and size.
+
+        :param file: Path to file
+        """
+        if os.path.exists(file):
+            stat = os.stat(file)
+            size = os.path.getsize(file)
+            message = '{0} stat is {1}, size is {2}'
+            self.logger.info(message.format(file, stat.st_mtime, size))
 
     def run(self, filepath, rotation_count, force_rotate=False):
         """
@@ -77,6 +91,7 @@ class Gyroscope(object):
             ret = self.compare_filestat('{0}.{1}'.format(filepath, i), lastfile)
             if ret is False:
                 self.logger.info('{0}, file is last.'.format(lastfile))
+                self.log_file_stat(lastfile)
                 os.remove(lastfile)
                 self.logger.info('{0}, delete success'.format(lastfile))
 
@@ -89,6 +104,8 @@ class Gyroscope(object):
                 ret = self.compare_filestat(src, dest)
                 if ret is False:
                     self.logger.info('Start move {0} to {1}'.format(src, dest))
+                    self.log_file_stat(src)
+                    self.log_file_stat(dest)
                     os.rename(src, dest)
                     self.logger.info('Move {0} to {1} success.'.format(src, dest))
 
@@ -97,11 +114,14 @@ class Gyroscope(object):
         ret = self.compare_filestat(filepath, '{0}.1'.format(filepath))
         if ret is False:
             self.logger.info('Start move {0} to {0}.1'.format(filepath))
+            self.log_file_stat(src)
+            self.log_file_stat(dest)
             shutil.copy2(filepath, '{0}.{1}'.format(filepath, 1))
             self.logger.info('Move {0} to {0}.1 success.'.format(filepath))
 
-
         self.logger.info('-----------------End rotation.-----------------')
+
+
 def main(filepath, rotation_count, force_rotate=False):
     logformat = '%(asctime)s - %(levelname)s - %(message)s'
     logging.basicConfig(format=logformat)
